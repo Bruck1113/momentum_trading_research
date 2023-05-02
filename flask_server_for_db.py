@@ -75,7 +75,6 @@ def update_corr_table(tickers_chain):
 def fin_result_feed(compay_name):
     return None
 
-
 @info_server.route('/options', methods=['GET', 'POST'])
 def options_feed():
     #trial
@@ -87,6 +86,18 @@ def options_feed():
 
     result = result.to_json()
     return result
+
+def option_payoff_chart(strike_price, type, premium):
+    price_series = [0, strike_price, strike_price * 2]
+    if type == "call":
+        for i in range(len(price_series)):
+            if i < strike_price:
+                price_series[i] = i - premium
+            else:
+                price_series[i] = strike_price - premium
+
+
+
 
 
 
