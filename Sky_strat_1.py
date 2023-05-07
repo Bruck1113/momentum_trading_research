@@ -111,7 +111,10 @@ class TestStrategy(bt.Strategy):
 class SmaStrategy(bt.Strategy):
     params = dict(
         pfast=11,  # period for the fast moving average
-        pslow=33   # period for the slow moving average
+        pslow=33,   # period for the slow moving average
+        # last_trading_date = datetime.now()
+        total_commision = 0,
+        num_trade = 0
     )
 
     def __init__(self):
@@ -120,74 +123,119 @@ class SmaStrategy(bt.Strategy):
         self.crossover = bt.ind.CrossOver(sma1, sma2)  # crossover signal
 
     def next(self):
-        if not self.position:  # not in the market
+        if self.position:
+            self.sell()
+            # self.p.total_commision += self.order.executed.comm
+            self.p.num_trade += 1
+
+        else:
+        # if not self.position:  # not in the market
             if self.crossover > 0:  # if fast crosses slow to the upside
                 self.buy()  # enter long
+                self.p.num_trade += 1
 
-        elif self.crossover < 0:  # in the market & cross to the downside
-            self.close()  # close long position
+    # outputting information
+    def log(self, txt):
+        dt = self.datas[0].datetime.date(0)
+        print('%s, %s' % (dt.isoformat(), txt))
+
+
+    def notify_order(self, order):
+        if order.status == order.Completed:
+            if order.isbuy():
+                self.log(
+                    "Executed BUY (Price: %.2f, Value: %.2f, Commission %.2f)" %
+                    (order.executed.price, order.executed.value, order.executed.comm))
+
+
+            else:
+                self.log(
+                    "Executed SELL (Price: %.2f, Value: %.2f, Commission %.2f)" %
+                    (order.executed.price, order.executed.value, order.executed.comm))
+
+            self.p.total_commision += order.executed.comm
+            self.bar_executed = len(self)
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.log("Order was canceled/margin/rejected")
+        self.order = None
+        # elif self.crossover < 0:  # in the market & cross to the downside
+        #     self.close()  # close long position
+
+def trade_profit_record(trade_value:list):
+    profit_record = {"win":0, "lose":0}
+    for i in range(len(trade_value)):
+        if trade_value[i] > 0:
+            if trade_value[i] > abs(trade_value[i - 1]):
+                profit_record["win"] += 1
+            else:
+                profit_record["lose"] += 1
+
+    return profit_record
+
 
 if __name__ == '__main__':
 # Create a cerebro entity
     cerebro = bt.Cerebro()
-
 # Add a strategy
     cerebro.addstrategy(SmaStrategy)
-connection = data_api.API_connection()
-df = connection.backtester_data_usage("daily", agri_tickers[0], "NA")
-endpoints = connection.get_start_and_end_date(df)
-df.to_csv("data.csv")
+
+    connection = data_api.API_connection()
+    df = connection.backtester_data_usage("daily", agri_tickers[0], "NA")
+    endpoints = connection.get_start_and_end_date(df)
+    df.to_csv("data.csv")
 
 
-# data
-data = btfeeds.GenericCSVData(
-        dataname='data.csv',
+    # data
+    data = btfeeds.GenericCSVData(
+            dataname='data.csv',
 
-        fromdate=datetime.datetime.strptime(endpoints[0], "%Y-%m-%d"),
-        todate=datetime.datetime.strptime(endpoints[1], "%Y-%m-%d"),
+            fromdate=datetime.datetime.strptime(endpoints[0], "%Y-%m-%d"),
+            todate=datetime.datetime.strptime(endpoints[1], "%Y-%m-%d"),
 
-        nullvalue=0.0,  # missing values to be replaced with 0
+            nullvalue=0.0,  # missing values to be replaced with 0
 
-        dtformat=('%Y-%m-%d'),
-        datetime=1,
-        open=2,
-        high=3,
-        low=4,
-        close=5,
-        volume=6,
+            dtformat=('%Y-%m-%d'),
+            datetime=1,
+            open=2,
+            high=3,
+            low=4,
+            close=5,
+            volume=6,
 
-)
-
-
-# Add the Data Feed to Cerebro
-cerebro.adddata(data)
-
-# Set our desired cash start
-cerebro.broker.setcash(10000.0)
-
-# Add a FixedSize sizer according to the stake
-cerebro.addsizer(bt.sizers.FixedSize, stake=5)
-
-#Add analyzers
-cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')
+    )
 
 
-# Set the commission
-cerebro.broker.setcommission(commission=0.002)
+    # Add the Data Feed to Cerebro
+    cerebro.adddata(data)
 
-# Print out the starting conditions
-print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+    # Set our desired cash start
+    cerebro.broker.setcash(10000.0)
 
-# Run over everything
-results = cerebro.run()
-strats = results[0]
+    # Add a FixedSize sizer according to the stake
+    cerebro.addsizer(bt.sizers.FixedSize, stake=5)
 
-portfolio_stats = strats.analyzers.getbyname('PyFolio')
-returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
-returns.index = returns.index.tz_convert(None)
-quantstats.reports.html(returns, output='stats.html', title='BTC Sentiment')
-# Print out the final result
-print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
+    #Add analyzers
+    cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')
 
-# Plot the result
-cerebro.plot(iplot=False)
+
+    # Set the commission
+    cerebro.broker.setcommission(commission=0)
+
+    # Print out the starting conditions
+    print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+
+    # Run over everything
+    results = cerebro.run()
+    strats = results[0]
+
+    portfolio_stats = strats.analyzers.getbyname('PyFolio')
+    returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
+    returns.index = returns.index.tz_convert(None)
+    quantstats.reports.html(returns, output='stats.html', title='BTC Sentiment')
+    # Print out the final result
+    print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
+    print('Commision expenses: %.2f' % strats.p.total_commision)
+    print('Number of trades carried out: %.2f' % strats.p.num_trade)
+    print(trade_profit_record(transactions.T.T["value"]))
+    # Plot the result
+    cerebro.plot(style='candlestick',loc='grey', grid=False, iplot=False)
