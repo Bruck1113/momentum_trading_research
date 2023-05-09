@@ -495,7 +495,7 @@ def test_convert_arff_data_dataframe_warning_low_memory_pandas(monkeypatch):
     data_id = 1119
     _monkey_patch_webbased_functions(monkeypatch, data_id, True)
 
-    msg = 'Could not adhere to working_memory config.'
+    msg = 'Could not adhere to working_memory config.ini.'
     with pytest.warns(UserWarning, match=msg):
         with config_context(working_memory=1e-6):
             fetch_openml(data_id=data_id, as_frame=True, cache=False)

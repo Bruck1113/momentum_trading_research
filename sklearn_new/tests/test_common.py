@@ -159,7 +159,7 @@ def test_configure():
     try:
         os.chdir(setup_path)
         old_argv = sys.argv
-        sys.argv = ['setup.py', 'config']
+        sys.argv = ['setup.py', 'config.ini']
 
         with warnings.catch_warnings():
             # The configuration spits out warnings when not finding

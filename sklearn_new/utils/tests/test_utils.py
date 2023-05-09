@@ -573,7 +573,7 @@ def test_gen_even_slices():
      (1024, 7, 1, 7, None),
      (1024 * 1024, None, 1, 1, None),
      (1024 * 1024 + 1, None, 1, 1,
-      'Could not adhere to working_memory config. '
+      'Could not adhere to working_memory config.ini. '
       'Currently 1MiB, 2MiB required.'),
      ])
 def test_get_chunk_n_rows(row_bytes, max_n_rows, working_memory,

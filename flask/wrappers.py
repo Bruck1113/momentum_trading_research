@@ -51,7 +51,7 @@ class Request(RequestBase):
 
     @property
     def max_content_length(self) -> t.Optional[int]:  # type: ignore
-        """Read-only view of the ``MAX_CONTENT_LENGTH`` config key."""
+        """Read-only view of the ``MAX_CONTENT_LENGTH`` config.ini key."""
         if current_app:
             return current_app.config["MAX_CONTENT_LENGTH"]
         else:
@@ -159,7 +159,7 @@ class Response(ResponseBase):
 
     @property
     def max_cookie_size(self) -> int:  # type: ignore
-        """Read-only view of the :data:`MAX_COOKIE_SIZE` config key.
+        """Read-only view of the :data:`MAX_COOKIE_SIZE` config.ini key.
 
         See :attr:`~werkzeug.wrappers.Response.max_cookie_size` in
         Werkzeug's docs.

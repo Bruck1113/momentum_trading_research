@@ -401,7 +401,7 @@ def format_filename(
 
 
 def get_app_dir(app_name: str, roaming: bool = True, force_posix: bool = False) -> str:
-    r"""Returns the config folder for the application.  The default behavior
+    r"""Returns the config.ini folder for the application.  The default behavior
     is to return whatever is most appropriate for the operating system.
 
     To give you an idea, for an app called ``"Foo Bar"``, something like
@@ -412,7 +412,7 @@ def get_app_dir(app_name: str, roaming: bool = True, force_posix: bool = False) 
     Mac OS X (POSIX):
       ``~/.foo-bar``
     Unix:
-      ``~/.config/foo-bar``
+      ``~/.config.ini/foo-bar``
     Unix (POSIX):
       ``~/.foo-bar``
     Windows (roaming):
@@ -428,7 +428,7 @@ def get_app_dir(app_name: str, roaming: bool = True, force_posix: bool = False) 
                     Has no affect otherwise.
     :param force_posix: if this is set to `True` then on any POSIX system the
                         folder will be stored in the home folder with a leading
-                        dot instead of the XDG config home or darwin's
+                        dot instead of the XDG config.ini home or darwin's
                         application support folder.
     """
     if WIN:
@@ -444,7 +444,7 @@ def get_app_dir(app_name: str, roaming: bool = True, force_posix: bool = False) 
             os.path.expanduser("~/Library/Application Support"), app_name
         )
     return os.path.join(
-        os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+        os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config.ini")),
         _posixify(app_name),
     )
 

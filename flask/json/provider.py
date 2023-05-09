@@ -205,7 +205,7 @@ class DefaultJSONProvider(JSONProvider):
             import warnings
 
             warnings.warn(
-                "The 'JSON_AS_ASCII' config key is deprecated and will"
+                "The 'JSON_AS_ASCII' config.ini key is deprecated and will"
                 " be removed in Flask 2.3. Set 'app.json.ensure_ascii'"
                 " instead.",
                 DeprecationWarning,
@@ -217,7 +217,7 @@ class DefaultJSONProvider(JSONProvider):
             import warnings
 
             warnings.warn(
-                "The 'JSON_SORT_KEYS' config key is deprecated and will"
+                "The 'JSON_SORT_KEYS' config.ini key is deprecated and will"
                 " be removed in Flask 2.3. Set 'app.json.sort_keys'"
                 " instead.",
                 DeprecationWarning,
@@ -279,7 +279,7 @@ class DefaultJSONProvider(JSONProvider):
             import warnings
 
             warnings.warn(
-                "The 'JSONIFY_PRETTYPRINT_REGULAR' config key is"
+                "The 'JSONIFY_PRETTYPRINT_REGULAR' config.ini key is"
                 " deprecated and will be removed in Flask 2.3. Set"
                 " 'app.json.compact' instead.",
                 DeprecationWarning,
@@ -297,7 +297,7 @@ class DefaultJSONProvider(JSONProvider):
             import warnings
 
             warnings.warn(
-                "The 'JSONIFY_MIMETYPE' config key is deprecated and"
+                "The 'JSONIFY_MIMETYPE' config.ini key is deprecated and"
                 " will be removed in Flask 2.3. Set 'app.json.mimetype'"
                 " instead.",
                 DeprecationWarning,

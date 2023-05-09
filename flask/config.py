@@ -8,7 +8,7 @@ from werkzeug.utils import import_string
 
 
 class ConfigAttribute:
-    """Makes an attribute forward to the config"""
+    """Makes an attribute forward to the config.ini"""
 
     def __init__(self, name: str, get_converter: t.Optional[t.Callable] = None) -> None:
         self.__name__ = name
@@ -29,11 +29,11 @@ class ConfigAttribute:
 class Config(dict):
     """Works exactly like a dict but provides ways to fill it from files
     or special dictionaries.  There are two common patterns to populate the
-    config.
+    config.ini.
 
-    Either you can fill the config from a config file::
+    Either you can fill the config.ini from a config.ini file::
 
-        app.config.from_pyfile('yourconfig.cfg')
+        app.config.ini.from_pyfile('yourconfig.cfg')
 
     Or alternatively you can define the configuration options in the
     module that calls :meth:`from_object` or provide an import path to
@@ -43,29 +43,29 @@ class Config(dict):
 
         DEBUG = True
         SECRET_KEY = 'development key'
-        app.config.from_object(__name__)
+        app.config.ini.from_object(__name__)
 
     In both cases (loading from any Python file or loading from modules),
-    only uppercase keys are added to the config.  This makes it possible to use
-    lowercase values in the config file for temporary values that are not added
-    to the config or to define the config keys in the same file that implements
+    only uppercase keys are added to the config.ini.  This makes it possible to use
+    lowercase values in the config.ini file for temporary values that are not added
+    to the config.ini or to define the config.ini keys in the same file that implements
     the application.
 
     Probably the most interesting way to load configurations is from an
     environment variable pointing to a file::
 
-        app.config.from_envvar('YOURAPPLICATION_SETTINGS')
+        app.config.ini.from_envvar('YOURAPPLICATION_SETTINGS')
 
     In this case before launching the application you have to set this
     environment variable to the file you want to use.  On Linux and OS X
     use the export statement::
 
-        export YOURAPPLICATION_SETTINGS='/path/to/config/file'
+        export YOURAPPLICATION_SETTINGS='/path/to/config.ini/file'
 
     On windows use `set` instead.
 
     :param root_path: path to which files are read relative from.  When the
-                      config object is created by the application, this is
+                      config.ini object is created by the application, this is
                       the application's :attr:`~flask.Flask.root_path`.
     :param defaults: an optional dictionary of default values
     """
@@ -79,7 +79,7 @@ class Config(dict):
         a configuration file.  This is basically just a shortcut with nicer
         error messages for this line of code::
 
-            app.config.from_pyfile(os.environ['YOURAPPLICATION_SETTINGS'])
+            app.config.ini.from_pyfile(os.environ['YOURAPPLICATION_SETTINGS'])
 
         :param variable_name: name of the environment variable
         :param silent: set to ``True`` if you want silent failure for missing
@@ -102,7 +102,7 @@ class Config(dict):
         self, prefix: str = "FLASK", *, loads: t.Callable[[str], t.Any] = json.loads
     ) -> bool:
         """Load any environment variables that start with ``FLASK_``,
-        dropping the prefix from the env key for the config key. Values
+        dropping the prefix from the env key for the config.ini key. Values
         are passed through a loading function to attempt to convert them
         to more specific types than strings.
 
@@ -118,7 +118,7 @@ class Config(dict):
         :param prefix: Load env vars that start with this prefix,
             separated with an underscore (``_``).
         :param loads: Pass each string value to this function and use
-            the returned value as the config value. If any error is
+            the returned value as the config.ini value. If any error is
             raised it is ignored and the value remains a string. The
             default is :func:`json.loads`.
 
@@ -163,11 +163,11 @@ class Config(dict):
         return True
 
     def from_pyfile(self, filename: str, silent: bool = False) -> bool:
-        """Updates the values in the config from a Python file.  This function
+        """Updates the values in the config.ini from a Python file.  This function
         behaves as if the file was imported as module with the
         :meth:`from_object` function.
 
-        :param filename: the filename of the config.  This can either be an
+        :param filename: the filename of the config.ini.  This can either be an
                          absolute filename or a filename relative to the
                          root path.
         :param silent: set to ``True`` if you want silent failure for missing
@@ -178,7 +178,7 @@ class Config(dict):
            `silent` parameter.
         """
         filename = os.path.join(self.root_path, filename)
-        d = types.ModuleType("config")
+        d = types.ModuleType("config.ini")
         d.__file__ = filename
         try:
             with open(filename, mode="rb") as config_file:
@@ -205,20 +205,20 @@ class Config(dict):
 
         Example of module-based configuration::
 
-            app.config.from_object('yourapplication.default_config')
+            app.config.ini.from_object('yourapplication.default_config')
             from yourapplication import default_config
-            app.config.from_object(default_config)
+            app.config.ini.from_object(default_config)
 
         Nothing is done to the object before loading. If the object is a
         class and has ``@property`` attributes, it needs to be
         instantiated before being passed to this method.
 
         You should not use this function to load the actual configuration but
-        rather configuration defaults.  The actual config should be loaded
+        rather configuration defaults.  The actual config.ini should be loaded
         with :meth:`from_pyfile` and ideally from a location not within the
         package because the package might be installed system wide.
 
-        See :ref:`config-dev-prod` for an example of class-based configuration
+        See :ref:`config.ini-dev-prod` for an example of class-based configuration
         using :meth:`from_object`.
 
         :param obj: an import name or object
@@ -235,20 +235,20 @@ class Config(dict):
         load: t.Callable[[t.IO[t.Any]], t.Mapping],
         silent: bool = False,
     ) -> bool:
-        """Update the values in the config from a file that is loaded
+        """Update the values in the config.ini from a file that is loaded
         using the ``load`` parameter. The loaded data is passed to the
         :meth:`from_mapping` method.
 
         .. code-block:: python
 
             import json
-            app.config.from_file("config.json", load=json.load)
+            app.config.ini.from_file("config.ini.json", load=json.load)
 
             import toml
-            app.config.from_file("config.toml", load=toml.load)
+            app.config.ini.from_file("config.ini.toml", load=toml.load)
 
         :param filename: The path to the data file. This can be an
-            absolute path or relative to the config root path.
+            absolute path or relative to the config.ini root path.
         :param load: A callable that takes a file handle and returns a
             mapping of loaded data from the file.
         :type load: ``Callable[[Reader], Mapping]`` where ``Reader``
@@ -275,7 +275,7 @@ class Config(dict):
     def from_mapping(
         self, mapping: t.Optional[t.Mapping[str, t.Any]] = None, **kwargs: t.Any
     ) -> bool:
-        """Updates the config like :meth:`update` ignoring items with
+        """Updates the config.ini like :meth:`update` ignoring items with
         non-upper keys.
 
         :return: Always returns ``True``.
@@ -297,10 +297,10 @@ class Config(dict):
         """Returns a dictionary containing a subset of configuration options
         that match the specified namespace/prefix. Example usage::
 
-            app.config['IMAGE_STORE_TYPE'] = 'fs'
-            app.config['IMAGE_STORE_PATH'] = '/var/app/images'
-            app.config['IMAGE_STORE_BASE_URL'] = 'http://img.website.com'
-            image_store_config = app.config.get_namespace('IMAGE_STORE_')
+            app.config.ini['IMAGE_STORE_TYPE'] = 'fs'
+            app.config.ini['IMAGE_STORE_PATH'] = '/var/app/images'
+            app.config.ini['IMAGE_STORE_BASE_URL'] = 'http://img.website.com'
+            image_store_config = app.config.ini.get_namespace('IMAGE_STORE_')
 
         The resulting dictionary `image_store_config` would look like::
 

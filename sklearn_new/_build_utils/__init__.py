@@ -18,7 +18,7 @@ from .openmp_helpers import check_openmp_support
 DEFAULT_ROOT = 'sklearn'
 
 # The following places need to be in sync with regard to Cython version:
-# - .circleci config file
+# - .circleci config.ini file
 # - sklearn/_build_utils/__init__.py
 # - advanced installation guide
 CYTHON_MIN_VERSION = '0.28.5'

@@ -177,7 +177,7 @@ class SessionInterface:
         return isinstance(obj, self.null_session_class)
 
     def get_cookie_name(self, app: "Flask") -> str:
-        """The name of the session cookie. Uses``app.config["SESSION_COOKIE_NAME"]``."""
+        """The name of the session cookie. Uses``app.config.ini["SESSION_COOKIE_NAME"]``."""
         return app.config["SESSION_COOKIE_NAME"]
 
     def get_cookie_domain(self, app: "Flask") -> t.Optional[str]:
@@ -241,7 +241,7 @@ class SessionInterface:
     def get_cookie_path(self, app: "Flask") -> str:
         """Returns the path for which the cookie should be valid.  The
         default implementation uses the value from the ``SESSION_COOKIE_PATH``
-        config var if it's set, and falls back to ``APPLICATION_ROOT`` or
+        config.ini var if it's set, and falls back to ``APPLICATION_ROOT`` or
         uses ``/`` if it's ``None``.
         """
         return app.config["SESSION_COOKIE_PATH"] or app.config["APPLICATION_ROOT"]
@@ -249,7 +249,7 @@ class SessionInterface:
     def get_cookie_httponly(self, app: "Flask") -> bool:
         """Returns True if the session cookie should be httponly.  This
         currently just returns the value of the ``SESSION_COOKIE_HTTPONLY``
-        config var.
+        config.ini var.
         """
         return app.config["SESSION_COOKIE_HTTPONLY"]
 
@@ -282,7 +282,7 @@ class SessionInterface:
         """Used by session backends to determine if a ``Set-Cookie`` header
         should be set for this session cookie for this response. If the session
         has been modified, the cookie is set. If the session is permanent and
-        the ``SESSION_REFRESH_EACH_REQUEST`` config is true, the cookie is
+        the ``SESSION_REFRESH_EACH_REQUEST`` config.ini is true, the cookie is
         always set.
 
         This check is usually skipped if the session was deleted.

@@ -114,24 +114,44 @@ class SmaStrategy(bt.Strategy):
         pslow=33,   # period for the slow moving average
         # last_trading_date = datetime.now()
         total_commision = 0,
-        num_trade = 0
+        num_trade = 0,
+        stop_loss = 0.01
     )
 
     def __init__(self):
         sma1 = bt.ind.SMA(period=self.p.pfast)  # fast moving average
         sma2 = bt.ind.SMA(period=self.p.pslow)  # slow moving average
+        self.rsi_sma = bt.ind.RSI_SMA()
+        self.rsi_ema = bt.ind.RSI_EMA()
         self.crossover = bt.ind.CrossOver(sma1, sma2)  # crossover signal
 
+        # Add ExpMA, WtgMA, StocSlow, MACD, ATR, RSI indicators for plotting.
+        bt.indicators.ExponentialMovingAverage(self.datas[0], period=25)
+        bt.indicators.WeightedMovingAverage(self.datas[0], period=25,subplot = True)
+        bt.indicators.StochasticSlow(self.datas[0])
+        bt.indicators.MACDHisto(self.datas[0])
+        rsi = bt.indicators.RSI(self.datas[0])
+        bt.indicators.SmoothedMovingAverage(rsi, period=10)
+        bt.indicators.ATR(self.datas[0], plot = False)
+
     def next(self):
-        if self.position:
-            self.sell()
-            # self.p.total_commision += self.order.executed.comm
-            self.p.num_trade += 1
+        #Current logic: We need to exit the current trade to enter into the next trade
+        if self.position.size > 0:
+            stop_price = self.data.close[0] * (1.0 - self.p.stop_loss)
+            if self.data.close[0] < stop_price:
+                #Need to stop loss
+                self.sell(exectype=bt.Order.Stop, price=stop_price, size=self.position.size)
+                self.p.num_trade += 1
+
+            elif self.position and self.data.close[0] > self.position.price:
+                self.sell(price=self.data.close[0], size = self.position.size)
+                # self.p.total_commision += self.order.executed.comm
+                self.p.num_trade += 1
 
         else:
         # if not self.position:  # not in the market
             if self.crossover > 0:  # if fast crosses slow to the upside
-                self.buy()  # enter long
+                self.buy(size=10000)  # enter long
                 self.p.num_trade += 1
 
     # outputting information
@@ -209,10 +229,11 @@ if __name__ == '__main__':
     cerebro.adddata(data)
 
     # Set our desired cash start
-    cerebro.broker.setcash(10000.0)
+    cerebro.broker.setcash(100000000000000.0)
 
     # Add a FixedSize sizer according to the stake
     cerebro.addsizer(bt.sizers.FixedSize, stake=5)
+    # cerebro.addindicator()
 
     #Add analyzers
     cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')

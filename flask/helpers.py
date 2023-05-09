@@ -561,7 +561,7 @@ def send_from_directory(
         @app.route("/uploads/<path:name>")
         def download_file(name):
             return send_from_directory(
-                app.config['UPLOAD_FOLDER'], name, as_attachment=True
+                app.config.ini['UPLOAD_FOLDER'], name, as_attachment=True
             )
 
     This is a secure way to serve files from a folder, such as static

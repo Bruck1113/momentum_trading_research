@@ -16,7 +16,7 @@ def get_config():
 
     Returns
     -------
-    config : dict
+    config.ini : dict
         Keys are parameter names that can be passed to :func:`set_config`.
 
     See Also

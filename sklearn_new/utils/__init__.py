@@ -994,7 +994,7 @@ def get_chunk_n_rows(row_bytes, *, max_n_rows=None, working_memory=None):
     if max_n_rows is not None:
         chunk_n_rows = min(chunk_n_rows, max_n_rows)
     if chunk_n_rows < 1:
-        warnings.warn('Could not adhere to working_memory config. '
+        warnings.warn('Could not adhere to working_memory config.ini. '
                       'Currently %.0fMiB, %.0fMiB required.' %
                       (working_memory, np.ceil(row_bytes * 2 ** -20)))
         chunk_n_rows = 1

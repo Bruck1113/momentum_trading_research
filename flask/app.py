@@ -196,7 +196,7 @@ class Flask(Scaffold):
                           package or module is assumed to be the instance
                           path.
     :param instance_relative_config: if set to ``True`` relative filenames
-                                     for loading the config are assumed to
+                                     for loading the config.ini are assumed to
                                      be relative to the instance path instead
                                      of the application root.
     :param root_path: The path to the root of the application files.
@@ -243,13 +243,13 @@ class Flask(Scaffold):
     #: .. versionadded:: 0.10
     app_ctx_globals_class = _AppCtxGlobals
 
-    #: The class that is used for the ``config`` attribute of this app.
+    #: The class that is used for the ``config.ini`` attribute of this app.
     #: Defaults to :class:`~flask.Config`.
     #:
     #: Example use cases for a custom class:
     #:
-    #: 1. Default values for certain config options.
-    #: 2. Access to config values through attributes in addition to keys.
+    #: 1. Default values for certain config.ini options.
+    #: 2. Access to config.ini values through attributes in addition to keys.
     #:
     #: .. versionadded:: 0.11
     config_class = Config
@@ -262,7 +262,7 @@ class Flask(Scaffold):
     #: If this is enabled and PROPAGATE_EXCEPTIONS is not changed from the
     #: default it's implicitly enabled.
     #:
-    #: This attribute can also be configured from the config with the
+    #: This attribute can also be configured from the config.ini with the
     #: ``TESTING`` configuration key.  Defaults to ``False``.
     testing = ConfigAttribute("TESTING")
 
@@ -270,7 +270,7 @@ class Flask(Scaffold):
     #: sign cookies and other things. Set this to a complex random value
     #: when you want to use the secure cookie for instance.
     #:
-    #: This attribute can also be configured from the config with the
+    #: This attribute can also be configured from the config.ini with the
     #: :data:`SECRET_KEY` configuration key. Defaults to ``None``.
     secret_key = ConfigAttribute("SECRET_KEY")
 
@@ -279,14 +279,14 @@ class Flask(Scaffold):
         """The name of the cookie set by the session interface.
 
         .. deprecated:: 2.2
-            Will be removed in Flask 2.3. Use ``app.config["SESSION_COOKIE_NAME"]``
+            Will be removed in Flask 2.3. Use ``app.config.ini["SESSION_COOKIE_NAME"]``
             instead.
         """
         import warnings
 
         warnings.warn(
             "'session_cookie_name' is deprecated and will be removed in Flask 2.3. Use"
-            " 'SESSION_COOKIE_NAME' in 'app.config' instead.",
+            " 'SESSION_COOKIE_NAME' in 'app.config.ini' instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -298,7 +298,7 @@ class Flask(Scaffold):
 
         warnings.warn(
             "'session_cookie_name' is deprecated and will be removed in Flask 2.3. Use"
-            " 'SESSION_COOKIE_NAME' in 'app.config' instead.",
+            " 'SESSION_COOKIE_NAME' in 'app.config.ini' instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -308,7 +308,7 @@ class Flask(Scaffold):
     #: date of a permanent session.  The default is 31 days which makes a
     #: permanent session survive for roughly one month.
     #:
-    #: This attribute can also be configured from the config with the
+    #: This attribute can also be configured from the config.ini with the
     #: ``PERMANENT_SESSION_LIFETIME`` configuration key.  Defaults to
     #: ``timedelta(days=31)``
     permanent_session_lifetime = ConfigAttribute(
@@ -323,7 +323,7 @@ class Flask(Scaffold):
 
         .. deprecated:: 2.2
             Will be removed in Flask 2.3. Use
-            ``app.config["SEND_FILE_MAX_AGE_DEFAULT"]`` instead.
+            ``app.config.ini["SEND_FILE_MAX_AGE_DEFAULT"]`` instead.
 
         .. versionchanged:: 2.0
             Defaults to ``None`` instead of 12 hours.
@@ -332,7 +332,7 @@ class Flask(Scaffold):
 
         warnings.warn(
             "'send_file_max_age_default' is deprecated and will be removed in Flask"
-            " 2.3. Use 'SEND_FILE_MAX_AGE_DEFAULT' in 'app.config' instead.",
+            " 2.3. Use 'SEND_FILE_MAX_AGE_DEFAULT' in 'app.config.ini' instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -344,7 +344,7 @@ class Flask(Scaffold):
 
         warnings.warn(
             "'send_file_max_age_default' is deprecated and will be removed in Flask"
-            " 2.3. Use 'SEND_FILE_MAX_AGE_DEFAULT' in 'app.config' instead.",
+            " 2.3. Use 'SEND_FILE_MAX_AGE_DEFAULT' in 'app.config.ini' instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -356,13 +356,13 @@ class Flask(Scaffold):
         it, from :func:`~flask.send_file`.
 
         .. deprecated:: 2.2
-            Will be removed in Flask 2.3. Use ``app.config["USE_X_SENDFILE"]`` instead.
+            Will be removed in Flask 2.3. Use ``app.config.ini["USE_X_SENDFILE"]`` instead.
         """
         import warnings
 
         warnings.warn(
             "'use_x_sendfile' is deprecated and will be removed in Flask 2.3. Use"
-            " 'USE_X_SENDFILE' in 'app.config' instead.",
+            " 'USE_X_SENDFILE' in 'app.config.ini' instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -374,7 +374,7 @@ class Flask(Scaffold):
 
         warnings.warn(
             "'use_x_sendfile' is deprecated and will be removed in Flask 2.3. Use"
-            " 'USE_X_SENDFILE' in 'app.config' instead.",
+            " 'USE_X_SENDFILE' in 'app.config.ini' instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -586,7 +586,7 @@ class Flask(Scaffold):
 
         #: The configuration dictionary as :class:`Config`.  This behaves
         #: exactly like a regular dictionary but supports additional methods
-        #: to load a config from files.
+        #: to load a config.ini from files.
         self.config = self.make_config(instance_relative_config)
 
         #: An instance of :attr:`aborter_class` created by
@@ -815,10 +815,10 @@ class Flask(Scaffold):
         return self._got_first_request
 
     def make_config(self, instance_relative: bool = False) -> Config:
-        """Used to create the config attribute by the Flask constructor.
+        """Used to create the config.ini attribute by the Flask constructor.
         The `instance_relative` parameter is passed in from the constructor
         of Flask (there named `instance_relative_config`) and indicates if
-        the config should be relative to the instance path or the root path
+        the config.ini should be relative to the instance path or the root path
         of the application.
 
         .. versionadded:: 0.8
@@ -874,18 +874,18 @@ class Flask(Scaffold):
         :meth:`create_jinja_environment`. It is enabled by default in debug mode.
 
         .. deprecated:: 2.2
-            Will be removed in Flask 2.3. Use ``app.config["TEMPLATES_AUTO_RELOAD"]``
+            Will be removed in Flask 2.3. Use ``app.config.ini["TEMPLATES_AUTO_RELOAD"]``
             instead.
 
         .. versionadded:: 1.0
-            This property was added but the underlying config and behavior
+            This property was added but the underlying config.ini and behavior
             already existed.
         """
         import warnings
 
         warnings.warn(
             "'templates_auto_reload' is deprecated and will be removed in Flask 2.3."
-            " Use 'TEMPLATES_AUTO_RELOAD' in 'app.config' instead.",
+            " Use 'TEMPLATES_AUTO_RELOAD' in 'app.config.ini' instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -898,7 +898,7 @@ class Flask(Scaffold):
 
         warnings.warn(
             "'templates_auto_reload' is deprecated and will be removed in Flask 2.3."
-            " Use 'TEMPLATES_AUTO_RELOAD' in 'app.config' instead.",
+            " Use 'TEMPLATES_AUTO_RELOAD' in 'app.config.ini' instead.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -972,7 +972,7 @@ class Flask(Scaffold):
 
     def update_template_context(self, context: dict) -> None:
         """Update the template context with some commonly used variables.
-        This injects request, session, config and g into the template
+        This injects request, session, config.ini and g into the template
         context as well as everything template context processors want
         to inject.  Note that the as of Flask 0.6, the original values
         in the context will not be overridden if a context processor
@@ -1012,7 +1012,7 @@ class Flask(Scaffold):
 
     @property
     def env(self) -> str:
-        """What environment the app is running in. This maps to the :data:`ENV` config
+        """What environment the app is running in. This maps to the :data:`ENV` config.ini
         key.
 
         **Do not enable development when deploying in production.**
@@ -1049,7 +1049,7 @@ class Flask(Scaffold):
         """Whether debug mode is enabled. When using ``flask run`` to start the
         development server, an interactive debugger will be shown for unhandled
         exceptions, and the server will be reloaded when code changes. This maps to the
-        :data:`DEBUG` config key. It may not behave as expected if set late.
+        :data:`DEBUG` config.ini key. It may not behave as expected if set late.
 
         **Do not enable debug mode when deploying in production.**
 
@@ -1102,10 +1102,10 @@ class Flask(Scaffold):
 
         :param host: the hostname to listen on. Set this to ``'0.0.0.0'`` to
             have the server available externally as well. Defaults to
-            ``'127.0.0.1'`` or the host in the ``SERVER_NAME`` config variable
+            ``'127.0.0.1'`` or the host in the ``SERVER_NAME`` config.ini variable
             if present.
         :param port: the port of the webserver. Defaults to ``5000`` or the
-            port defined in the ``SERVER_NAME`` config variable if present.
+            port defined in the ``SERVER_NAME`` config.ini variable if present.
         :param debug: if given, enable or disable debug mode. See
             :attr:`debug`.
         :param load_dotenv: Load the nearest :file:`.env` and :file:`.flaskenv`
@@ -1941,7 +1941,7 @@ class Flask(Scaffold):
         this requires setting :data:`SERVER_NAME` so Flask knows what
         domain to use. :data:`APPLICATION_ROOT` and
         :data:`PREFERRED_URL_SCHEME` should also be configured as
-        needed. This config is only used when not in an active request.
+        needed. This config.ini is only used when not in an active request.
 
         Functions can be decorated with :meth:`url_defaults` to modify
         keyword arguments before the URL is built.
