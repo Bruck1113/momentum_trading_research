@@ -12,6 +12,8 @@ import data_api
 import quantstats
 import yfinance as yf
 import pandas_ta as pt
+import pandas as pd
+
 
 testing_symbols = ["BA", "VWAGY", 'TSLA', 'BABA', 'OXY', 'BTC-USD', 'NQ=F', '^VIX', 'GC=F', 'ETH-USD', 'MMM', 'AAPL', 'NVDA', 'SOFI', 'NIO']
 # Create a Stratey
@@ -115,7 +117,19 @@ class SmaStrategy(bt.Strategy):
         # last_trading_date = datetime.now()
         total_commision = 0,
         num_trade = 0,
-        stop_loss = 0.01
+        stop_loss = 0.01,
+        record = {"ExponentialMovingAverage":[],
+                  "WeightedMovingAverage":[],
+                  "StochasticSlow":[],
+                  "MACDHisto":[],
+                  "RSI":[],
+                  "SmoothedMovingAverage":[],
+                  "ATR":[],
+                  "time":[],
+                  "value":[]
+                  },
+        trade = {"time": [], "amount": []},
+        next_called_time = 0
     )
 
     def __init__(self):
@@ -126,15 +140,16 @@ class SmaStrategy(bt.Strategy):
         self.crossover = bt.ind.CrossOver(sma1, sma2)  # crossover signal
 
         # Add ExpMA, WtgMA, StocSlow, MACD, ATR, RSI indicators for plotting.
-        bt.indicators.ExponentialMovingAverage(self.datas[0], period=25)
-        bt.indicators.WeightedMovingAverage(self.datas[0], period=25,subplot = True)
-        bt.indicators.StochasticSlow(self.datas[0])
-        bt.indicators.MACDHisto(self.datas[0])
-        rsi = bt.indicators.RSI(self.datas[0])
-        bt.indicators.SmoothedMovingAverage(rsi, period=10)
-        bt.indicators.ATR(self.datas[0], plot = False)
+        self.ind1 = bt.indicators.ExponentialMovingAverage(self.datas[0], period=25)
+        self.ind2 = bt.indicators.WeightedMovingAverage(self.datas[0], period=25,subplot = True)
+        self.ind3 = bt.indicators.StochasticSlow(self.datas[0])
+        self.ind4 = bt.indicators.MACDHisto(self.datas[0])
+        self.ind5 = rsi = bt.indicators.RSI(self.datas[0])
+        self.ind6 = bt.indicators.SmoothedMovingAverage(rsi, period=10)
+        self.ind7 = bt.indicators.ATR(self.datas[0], plot = False)
 
     def next(self):
+        self.p.next_called_time += 1
         #Current logic: We need to exit the current trade to enter into the next trade
         if self.position.size > 0:
             stop_price = self.data.close[0] * (1.0 - self.p.stop_loss)
@@ -142,17 +157,40 @@ class SmaStrategy(bt.Strategy):
                 #Need to stop loss
                 self.sell(exectype=bt.Order.Stop, price=stop_price, size=self.position.size)
                 self.p.num_trade += 1
+                self.p.trade["amount"].append(-1)
+                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
 
             elif self.position and self.data.close[0] > self.position.price:
                 self.sell(price=self.data.close[0], size = self.position.size)
                 # self.p.total_commision += self.order.executed.comm
                 self.p.num_trade += 1
+                self.p.trade["amount"].append(-1)
+                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
+            else:
+                self.p.trade["amount"].append(0)
+                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
 
         else:
         # if not self.position:  # not in the market
             if self.crossover > 0:  # if fast crosses slow to the upside
                 self.buy(size=10000)  # enter long
                 self.p.num_trade += 1
+                self.p.trade["amount"].append(1)
+                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
+            else:
+                self.p.trade["amount"].append(0)
+                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
+
+        # #For record
+        # self.p.record["ExponentialMovingAverage"].append(bt.indicators.ema.ExponentialMovingAverage)
+        # self.p.record["ExponentialMovingAverage"].append(list(bt.indicators.ema.ExponentialMovingAverage)[0])
+        # self.p.record["WeightedMovingAverage"].append(list(bt.indicators.wma.WeightedMovingAverage)[0])
+        # self.p.record["StochasticSlow"].append(list(bt.indicators.stochastic.StochasticSlow)[0])
+        # self.p.record["MACDHisto"].append(list(bt.indicators.macd.MACDHisto)[0])
+        # self.p.record["RSI"].append(list(bt.indicators.rsi.RSI)[0])
+        # self.p.record["SmoothedMovingAverage"].append(list(bt.indicators.smma.SmoothedMovingAverage)[0])
+        # self.p.record["SmoothedMovingAverage"].append(list(bt.indicators.atr.ATR)[0])
+
 
     # outputting information
     def log(self, txt):
@@ -181,6 +219,11 @@ class SmaStrategy(bt.Strategy):
         # elif self.crossover < 0:  # in the market & cross to the downside
         #     self.close()  # close long position
 
+
+
+
+
+#Helper functions
 def trade_profit_record(trade_value:list):
     profit_record = {"win":0, "lose":0}
     for i in range(len(trade_value)):
@@ -199,8 +242,11 @@ if __name__ == '__main__':
 # Add a strategy
     cerebro.addstrategy(SmaStrategy)
 
+    cerebro.addobserver(bt.observers.Broker)
     connection = data_api.API_connection()
-    df = connection.backtester_data_usage("daily", agri_tickers[0], "NA")
+    df = connection.backtester_data_usage("daily", agri_tickers[1], "NA")
+    TIME = df["Datetime"]
+
     endpoints = connection.get_start_and_end_date(df)
     df.to_csv("data.csv")
 
@@ -229,7 +275,7 @@ if __name__ == '__main__':
     cerebro.adddata(data)
 
     # Set our desired cash start
-    cerebro.broker.setcash(100000000000000.0)
+    cerebro.broker.setcash(10000000.0)
 
     # Add a FixedSize sizer according to the stake
     cerebro.addsizer(bt.sizers.FixedSize, stake=5)
@@ -254,6 +300,19 @@ if __name__ == '__main__':
     returns.index = returns.index.tz_convert(None)
     quantstats.reports.html(returns, output='stats.html', title='BTC Sentiment')
     # Print out the final result
+    strats.p.record["ExponentialMovingAverage"] = strats.ind1.array
+    strats.p.record["WeightedMovingAverage"] = strats.ind2.array
+    strats.p.record["StochasticSlow"] = strats.ind3.array
+    strats.p.record["MACDHisto"] = strats.ind4.array
+    strats.p.record["RSI"] = strats.ind5.array
+    strats.p.record["SmoothedMovingAverage"] = strats.ind6.array
+    strats.p.record["ATR"] = strats.ind7.array
+    strats.p.record["time"] = TIME[:-1]
+    strats.p.record["value"] = strats.observers.broker.array[:len(strats.p.record["ATR"])]
+    print([len(item) for item in strats.p.record.values()])
+    df = pd.DataFrame(strats.p.record)
+
+    df.to_csv("evaluation2.csv")
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
     print('Commision expenses: %.2f' % strats.p.total_commision)
     print('Number of trades carried out: %.2f' % strats.p.num_trade)
