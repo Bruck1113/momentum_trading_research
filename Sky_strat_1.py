@@ -244,7 +244,7 @@ if __name__ == '__main__':
 
     cerebro.addobserver(bt.observers.Broker)
     connection = data_api.API_connection()
-    df = connection.backtester_data_usage("daily", agri_tickers[1], "NA")
+    df = connection.backtester_data_usage("daily", agri_tickers[0], "NA")
     TIME = df["Datetime"]
 
     endpoints = connection.get_start_and_end_date(df)
@@ -307,6 +307,7 @@ if __name__ == '__main__':
     strats.p.record["RSI"] = strats.ind5.array
     strats.p.record["SmoothedMovingAverage"] = strats.ind6.array
     strats.p.record["ATR"] = strats.ind7.array
+
     strats.p.record["time"] = TIME[:-1]
     strats.p.record["value"] = strats.observers.broker.array[:len(strats.p.record["ATR"])]
     print([len(item) for item in strats.p.record.values()])
