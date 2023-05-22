@@ -14,6 +14,7 @@ import yfinance as yf
 import pandas_ta as pt
 import pandas as pd
 import rf_model
+import numpy as np
 
 testing_symbols = ["BA", "VWAGY", 'TSLA', 'BABA', 'OXY', 'BTC-USD', 'NQ=F', '^VIX', 'GC=F', 'ETH-USD', 'MMM', 'AAPL', 'NVDA', 'SOFI', 'NIO']
 # Create a Stratey
@@ -251,7 +252,7 @@ class rf_agric_strat(bt.Strategy):
         self.rsi_sma = bt.ind.RSI_SMA()
         self.rsi_ema = bt.ind.RSI_EMA()
         self.crossover = bt.ind.CrossOver(sma1, sma2)  # crossover signal
-        self.ao_crossover = bt.ind.CrossOver(AwesomeOscillator)
+        # self.ao_crossover = bt.ind.CrossOver(AwesomeOscillator)
         self.rsi = bt.ind.RSI()
 
         # Add ExpMA, WtgMA, StocSlow, MACD, ATR, RSI indicators for plotting.
@@ -289,6 +290,13 @@ class rf_agric_strat(bt.Strategy):
                                                                           self.ind2[0]) - 1]])[0]))
         print("Model predicted should buy")
         #
+
+        if self.position.size != 0:
+            pos = self.position.size
+            price = self.position.price
+
+            #We define a window to measure the short term volatility
+            vol = np.std(self.self.data.close[])
 
         if model_output == -1:
             #need to short the stock
@@ -457,6 +465,7 @@ if __name__ == '__main__':
     strats.p.record["SmoothedMovingAverage"] = strats.ind6.array
     strats.p.record["ATR"] = strats.ind7.array
     strats.p.record["AO"] = strats.ind8.array
+    strats.p.record["WilliamR"] = strats.ind9.array
 
     strats.p.record["time"] = TIME[:-1]
     strats.p.record["value"] = strats.observers.broker.array[:len(strats.p.record["ATR"])]
