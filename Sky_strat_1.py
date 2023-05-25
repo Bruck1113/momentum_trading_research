@@ -241,8 +241,10 @@ class rf_agric_strat(bt.Strategy):
                   "AO":[],
                   "WilliamR":[]
                   },
-        trade = {"time": [], "amount": []},
-        next_called_time = 0
+        trade = {"time": [], "amount":[]},
+        next_called_time = 0,
+        model_output = [],
+        result = {"Time":[], "Model signal": [], "Profit/loss": []}
     )
 
     def __init__(self):
@@ -252,6 +254,7 @@ class rf_agric_strat(bt.Strategy):
         self.rsi_sma = bt.ind.RSI_SMA()
         self.rsi_ema = bt.ind.RSI_EMA()
         self.crossover = bt.ind.CrossOver(sma1, sma2)  # crossover signal
+        self.exit_crossover = bt.ind.CrossOver(sma2, sma1)
         # self.ao_crossover = bt.ind.CrossOver(AwesomeOscillator)
         self.rsi = bt.ind.RSI()
 
@@ -284,11 +287,15 @@ class rf_agric_strat(bt.Strategy):
                                                                           self.ind2.array[self.ind2.array.index(
                                                                           self.ind2[0]) - 1]])[0]}, index=[0])
         model_output = self.rf_model.predict(input)
+        self.p.model_output.append(model_output)
         print("RSI: " + str(self.models.range_interval([self.rsi[0]], 65, 38)[0]) + "WMV_bin: " + str(self.models.turn_trend_into_bin([self.ind2.array[
                                                                           self.ind2.array.index(self.ind2[0])] -
                                                                           self.ind2.array[self.ind2.array.index(
                                                                           self.ind2[0]) - 1]])[0]))
-        print("Model predicted should buy")
+        if model_output == 1:
+            print("Model predicted should buy")
+        else:
+            print("Model predicted should sell")
         #
 
         if self.position.size != 0:
@@ -296,53 +303,128 @@ class rf_agric_strat(bt.Strategy):
             price = self.position.price
 
             #We define a window to measure the short term volatility
-            vol = np.std(self.self.data.close[])
+            # vol = np.std(self.self.data.close[])
+            if pos > 0:
+                # ML job
+                #We have long position opening
+                stop_price = price * (1.0 - self.p.stop_loss)
 
-        if model_output == -1:
-            #need to short the stock
-            self.sell(exectype=bt.Order.Limit, price=self.data.close[0], size = 10)
+                if self.exit_crossover > 0:
+                    #Exit signal need to more confirmed
+                    #Exit the long position
+                    self.p.result["Time"].append(self.datas[0].datetime.date(0))
+                    self.p.result["Model signal"].append(model_output)
+                    self.p.result["Profit/loss"].append(self.data.close[0] - price)
+                    self.close()
 
-        if self.position.size > 0:
-            #ML job
 
-            stop_price = self.data.close[0] * (1.0 - self.p.stop_loss)
-            if self.data.close[0] < stop_price:
-                #Need to stop loss
-                self.sell(exectype=bt.Order.Stop, price=stop_price, size=self.position.size)
-                self.p.num_trade += 1
-                self.p.trade["amount"].append(-1)
-                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
+                elif  self.data.close[0] < self.position.price and model_output == 1:
+                    # self.sell(exectype=bt.Order.Limit, price=self.data.close[0], size=self.position.size)
+                    # self.p.total_commision += self.order.executed.comm
+                    self.buy(exectype=bt.Order.Limit, price=self.data.close[0], size=int(self.broker.get_cash() * 0.1 / self.data.close[0] / 2))
+                    # self.sell(exectype=bt.Order.Stop, price=stop_price, size=self.position.size)
+                    self.p.num_trade += 1
+                    self.p.trade["amount"].append(self.data.close[0])
+                    # self.p.trade["long_price"].append(self.data.close[0])
+                    self.p.trade["time"].append(
+                        self.datas[0].datetime.date(0))
+                    # datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d'))
 
-            elif self.position and self.data.close[0] > self.position.price:
-                self.sell(exectype=bt.Order.Limit, price=self.data.close[0], size = self.position.size)
-                # self.p.total_commision += self.order.executed.comm
-                self.p.num_trade += 1
-                self.p.trade["amount"].append(-1)
-                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
+                elif self.data.close[0] < self.position.price and model_output == -1:
+
+                    self.p.result["Time"].append(self.datas[0].datetime.date(0))
+                    self.p.result["Model signal"].append(model_output)
+                    self.p.result["Profit/loss"].append(self.data.close[0] - price)
+                    self.close()
+                    self.p.trade["amount"].append(-self.position.price)
+                    # self.p.trade["short_price"].append(self.position.price)
+                    self.p.trade["time"].append(
+                        self.datas[0].datetime.date(0))
+
+                elif self.data.close[0] < stop_price:
+                    # Need to stop loss
+                    self.p.result["Time"].append(self.datas[0].datetime.date(0))
+                    self.p.result["Model signal"].append(model_output)
+                    self.p.result["Profit/loss"].append(self.data.close[0] - price)
+                    self.close()
+                    self.p.num_trade += 1
+                    self.p.trade["amount"].append(-self.position.price)
+                    # self.p.trade["short_price"].append(self.position.price)
+                    self.p.trade["time"].append(
+                        self.datas[0].datetime.date(0))
+
             else:
-                self.p.trade["amount"].append(0)
-                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
+                #We have short position opening
+                stop_price = price * (1.0 + self.p.stop_loss)
+
+                if self.crossover > 0:
+                    self.p.result["Time"].append(self.datas[0].datetime.date(0))
+                    self.p.result["Model signal"].append(model_output)
+                    self.p.result["Profit/loss"].append(self.data.close[0] - price)
+                    self.close()
+
+                elif self.data.close[0] > self.position.price:
+                    #If the closing price is higher than the price we entered into the short position
+                    if  model_output == -1:
+                        # self.sell(exectype=bt.Order.Limit, price=self.data.close[0], size=self.position.size)
+                        # self.p.total_commision += self.order.executed.comm
+                        self.sell(exectype=bt.Order.Limit, price=self.data.close[0], size=int(self.broker.get_cash() * 0.1 / self.data.close[0] / 2))
+                        # self.sell(exectype=bt.Order.Stop, price=stop_price, size=self.position.size)
+                        self.p.num_trade += 1
+                        self.p.trade["amount"].append(-self.data.close[0])
+                        # self.p.trade["short_price"].append(self.data.close[0])
+                        self.p.trade["time"].append(
+                        self.datas[0].datetime.date(0))
+
+                    elif model_output == 1:
+
+                        self.p.result["Time"].append(self.datas[0].datetime.date(0))
+                        self.p.result["Model signal"].append(model_output)
+                        self.p.result["Profit/loss"].append(self.data.close[0] - price)
+                        self.close()
+                        self.p.trade["amount"].append(self.position.price)
+                        # self.p.trade["long_price"].append(self.position.price)
+                        self.p.trade["time"].append(
+                            self.datas[0].datetime.date(0))
+
+                elif self.data.close[0] > stop_price:
+                    # Need to stop loss
+
+                    self.p.result["Time"].append(self.datas[0].datetime.date(0))
+                    self.p.result["Model signal"].append(model_output)
+                    self.p.result["Profit/loss"].append(self.data.close[0] - price)
+                    self.close()
+                    self.p.num_trade += 1
+                    # self.p.trade["long_price"].append(self.position.price)
+                    self.p.trade["amount"].append(self.position.price)
+                    self.p.trade["time"].append(
+                        self.datas[0].datetime.date(0))
 
         else:
-        # if not self.position:  # not in the market
-            if self.crossover > 0 and model_output == 1:  # if fast crosses slow to the upside
-                self.buy(size=10000, exectype=bt.Order.Limit)  # enter long
+            print("there are no opening positions")
+            # if not self.position:  # not in the market
+            print("Available position size to enter: " + str(int(self.broker.get_cash() * 0.1)))
+            if self.crossover > 0 or model_output == 1:  # if fast crosses slow to the upside
+                self.buy(size=int(self.broker.get_cash() * 0.1 / self.data.close[0]), exectype=bt.Order.Limit)  # enter long
                 self.p.num_trade += 1
-                self.p.trade["amount"].append(1)
-                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
+                # self.p.trade["long_price"].append(self.position.price)
+                self.p.trade["amount"].append(self.position.price)
+                self.p.trade["time"].append(
+                    self.datas[0].datetime.date(0))
+
+            elif model_output == -1:
+                self.sell(size=int(self.broker.get_cash() * 0.1 / self.data.close[0]), exectype=bt.Order.Limit)  # enter long
+                self.p.num_trade += 1
+                # self.p.trade["short_price"].append(self.position.price)
+                self.p.trade["amount"].append(-self.position.price)
+                self.p.trade["time"].append(
+                    self.datas[0].datetime.date(0))
+
             else:
                 self.p.trade["amount"].append(0)
-                self.p.trade["time"].append(datetime.datetime.fromtimestamp(self.data.datetime[0]).strftime('%Y-%m-%d %H:%M:%S'))
+                self.p.trade["time"].append(
+                    self.datas[0].datetime.date(0))
 
-        # #For record
-        # self.p.record["ExponentialMovingAverage"].append(bt.indicators.ema.ExponentialMovingAverage)
-        # self.p.record["ExponentialMovingAverage"].append(list(bt.indicators.ema.ExponentialMovingAverage)[0])
-        # self.p.record["WeightedMovingAverage"].append(list(bt.indicators.wma.WeightedMovingAverage)[0])
-        # self.p.record["StochasticSlow"].append(list(bt.indicators.stochastic.StochasticSlow)[0])
-        # self.p.record["MACDHisto"].append(list(bt.indicators.macd.MACDHisto)[0])
-        # self.p.record["RSI"].append(list(bt.indicators.rsi.RSI)[0])
-        # self.p.record["SmoothedMovingAverage"].append(list(bt.indicators.smma.SmoothedMovingAverage)[0])
-        # self.p.record["SmoothedMovingAverage"].append(list(bt.indicators.atr.ATR)[0])
 
 
     # outputting information
@@ -429,7 +511,7 @@ if __name__ == '__main__':
     cerebro.adddata(data)
 
     # Set our desired cash start
-    cerebro.broker.setcash(10000000.0)
+    cerebro.broker.setcash(1000000.0)
 
     # Add a FixedSize sizer according to the stake
     cerebro.addsizer(bt.sizers.FixedSize, stake=5)
@@ -456,6 +538,7 @@ if __name__ == '__main__':
     returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
     returns.index = returns.index.tz_convert(None)
     quantstats.reports.html(returns, output='stats.html', title='BTC Sentiment')
+
     # Print out the final result
     strats.p.record["ExponentialMovingAverage"] = strats.ind1.array
     strats.p.record["WeightedMovingAverage"] = strats.ind2.array
@@ -472,10 +555,21 @@ if __name__ == '__main__':
     print([len(item) for item in strats.p.record.values()])
     df = pd.DataFrame(strats.p.record)
 
+    trade_rec = pd.DataFrame(strats.p.trade)
+    trade_rec.to_csv("trade_record.csv")
     df.to_csv("evaluation.csv")
+
+    pnl_rec = pd.DataFrame(strats.p.result)
+    pnl_rec.to_csv("pnl.csv")
+
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
     print('Commision expenses: %.2f' % strats.p.total_commision)
     print('Number of trades carried out: %.2f' % strats.p.num_trade)
     print(trade_profit_record(transactions.T.T["value"]))
     # Plot the result
     cerebro.plot(style='candlestick',loc='grey', grid=False, iplot=False)
+
+
+
+
+
