@@ -15,6 +15,7 @@ import pandas_ta as pt
 import pandas as pd
 import rf_model
 import numpy as np
+import stats
 
 testing_symbols = ["BA", "VWAGY", 'TSLA', 'BABA', 'OXY', 'BTC-USD', 'NQ=F', '^VIX', 'GC=F', 'ETH-USD', 'MMM', 'AAPL', 'NVDA', 'SOFI', 'NIO']
 # Create a Stratey
@@ -239,12 +240,14 @@ class rf_agric_strat(bt.Strategy):
                   "time":[],
                   "value":[],
                   "AO":[],
-                  "WilliamR":[]
+                  "WilliamR":[],
+                  "Vol_signal": [0 for i in range(99)]
                   },
         trade = {"time": [], "amount":[]},
         next_called_time = 0,
         model_output = [],
-        result = {"Time":[], "Model signal": [], "Profit/loss": []}
+        result = {"Time":[], "Model signal": [], "Profit/loss": []},
+        vol_rec = {"Time":[], "Signal":[]}
     )
 
     def __init__(self):
@@ -268,6 +271,10 @@ class rf_agric_strat(bt.Strategy):
         self.ind7 = bt.indicators.ATR(self.datas[0], plot = False)
         self.ind8 = bt.indicators.AwesomeOscillator(self.datas[0])
         self.ind9 = bt.indicators.WilliamsR(self.datas[0])
+
+
+        self.long_std = bt.indicators.StandardDeviation(self.datas[0], period = 100)
+        self.short_std = bt.indicators.StandardDeviation(self.datas[0], period = 10)
 
 
         # price_data = pd.read_csv("data.csv")
@@ -298,6 +305,30 @@ class rf_agric_strat(bt.Strategy):
             print("Model predicted should sell")
         #
 
+        #Volitility consideration
+        daily_stddev = stats.stdev([self.data.close[0], self.data.open[0], self.data.high[0], self.data.low[0]])
+        daily_mean = stats.mean([self.data.close[0], self.data.open[0], self.data.high[0], self.data.low[0]])
+        vol_signal = 1
+        if self.long_std > self.short_std:
+            diff = daily_mean - self.ind2
+            if diff/self.long_std < 1 and diff/self.long_std > -1:
+                vol_signal = 0
+            elif diff/self.long_std < -1:
+                vol_signal = -1
+        else:
+            vol_signal = 0
+
+        self.p.record["Vol_signal"].append(vol_signal)
+        self.p.vol_rec["Time"].append(self.datas[0].datetime.date(0))
+        self.p.vol_rec["Signal"].append(vol_signal)
+
+        pos_size = int(self.broker.get_cash() * 0.1 / self.data.close[0] / 2)
+        if vol_signal == 1:
+            pos_size = int(int(self.broker.get_cash() * 0.1 / self.data.close[0] / 2) * 1.1)
+        elif vol_signal == -1:
+            pos_size = int(int(self.broker.get_cash() * 0.1 / self.data.close[0] / 2) * 0.9)
+
+        model_output = model_output[0]
         if self.position.size != 0:
             pos = self.position.size
             price = self.position.price
@@ -308,6 +339,7 @@ class rf_agric_strat(bt.Strategy):
                 # ML job
                 #We have long position opening
                 stop_price = price * (1.0 - self.p.stop_loss)
+                # model_output = model_output[0]
 
                 if self.exit_crossover > 0:
                     #Exit signal need to more confirmed
@@ -315,13 +347,16 @@ class rf_agric_strat(bt.Strategy):
                     self.p.result["Time"].append(self.datas[0].datetime.date(0))
                     self.p.result["Model signal"].append(model_output)
                     self.p.result["Profit/loss"].append(self.data.close[0] - price)
+
                     self.close()
 
 
                 elif  self.data.close[0] < self.position.price and model_output == 1:
                     # self.sell(exectype=bt.Order.Limit, price=self.data.close[0], size=self.position.size)
                     # self.p.total_commision += self.order.executed.comm
-                    self.buy(exectype=bt.Order.Limit, price=self.data.close[0], size=int(self.broker.get_cash() * 0.1 / self.data.close[0] / 2))
+                    self.buy(exectype=bt.Order.Limit, price=self.data.close[0], size=pos_size)
+                    # self.p.result["vol signal"].append(vol_signal)
+
                     # self.sell(exectype=bt.Order.Stop, price=stop_price, size=self.position.size)
                     self.p.num_trade += 1
                     self.p.trade["amount"].append(self.data.close[0])
@@ -357,6 +392,7 @@ class rf_agric_strat(bt.Strategy):
                 #We have short position opening
                 stop_price = price * (1.0 + self.p.stop_loss)
 
+
                 if self.crossover > 0:
                     self.p.result["Time"].append(self.datas[0].datetime.date(0))
                     self.p.result["Model signal"].append(model_output)
@@ -368,7 +404,13 @@ class rf_agric_strat(bt.Strategy):
                     if  model_output == -1:
                         # self.sell(exectype=bt.Order.Limit, price=self.data.close[0], size=self.position.size)
                         # self.p.total_commision += self.order.executed.comm
-                        self.sell(exectype=bt.Order.Limit, price=self.data.close[0], size=int(self.broker.get_cash() * 0.1 / self.data.close[0] / 2))
+                        # if vol_signal == 1:
+                        #     pos_size = int(int(self.broker.get_cash() * 0.1 / self.data.close[0] / 2) * 1.1)
+                        # elif vol_signal == -1:
+                        #     pos_size = int(int(self.broker.get_cash() * 0.1 / self.data.close[0] / 2) * 0.9)
+                        self.sell(exectype=bt.Order.Limit, price=self.data.close[0], size=pos_size)
+                        # self.p.result["vol signal"].append(vol_signal)
+
                         # self.sell(exectype=bt.Order.Stop, price=stop_price, size=self.position.size)
                         self.p.num_trade += 1
                         self.p.trade["amount"].append(-self.data.close[0])
@@ -405,7 +447,9 @@ class rf_agric_strat(bt.Strategy):
             # if not self.position:  # not in the market
             print("Available position size to enter: " + str(int(self.broker.get_cash() * 0.1)))
             if self.crossover > 0 or model_output == 1:  # if fast crosses slow to the upside
-                self.buy(size=int(self.broker.get_cash() * 0.1 / self.data.close[0]), exectype=bt.Order.Limit)  # enter long
+                self.buy(size=pos_size * 2, exectype=bt.Order.Limit)  # enter long
+                # self.p.result["vol signal"].append(vol_signal)
+
                 self.p.num_trade += 1
                 # self.p.trade["long_price"].append(self.position.price)
                 self.p.trade["amount"].append(self.position.price)
@@ -413,7 +457,9 @@ class rf_agric_strat(bt.Strategy):
                     self.datas[0].datetime.date(0))
 
             elif model_output == -1:
-                self.sell(size=int(self.broker.get_cash() * 0.1 / self.data.close[0]), exectype=bt.Order.Limit)  # enter long
+                self.sell(size=pos_size * 2, exectype=bt.Order.Limit)  # enter long
+                # self.p.result["vol signal"].append(vol_signal)
+
                 self.p.num_trade += 1
                 # self.p.trade["short_price"].append(self.position.price)
                 self.p.trade["amount"].append(-self.position.price)
@@ -421,6 +467,7 @@ class rf_agric_strat(bt.Strategy):
                     self.datas[0].datetime.date(0))
 
             else:
+                # self.p.result["vol signal"].append(vol_signal)
                 self.p.trade["amount"].append(0)
                 self.p.trade["time"].append(
                     self.datas[0].datetime.date(0))
@@ -559,7 +606,15 @@ if __name__ == '__main__':
     trade_rec.to_csv("trade_record.csv")
     df.to_csv("evaluation.csv")
 
+    # new_dict = strats.p.result["Time", "Model signal", "Profit/loss"]
+    # vol_df = pd.DataFrame(strats.p.vol_rec)
+    Signals = []
+    for i in strats.p.result["Time"]:
+        ind = strats.p.vol_rec["Time"].index(i)
+        Signals.append(strats.p.vol_rec["Signal"][ind])
+
     pnl_rec = pd.DataFrame(strats.p.result)
+    pnl_rec["vol_signal"] = Signals
     pnl_rec.to_csv("pnl.csv")
 
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
