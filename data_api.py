@@ -14,6 +14,9 @@ import numpy as np
 from statsmodels.tsa.stattools import coint
 import seaborn
 
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+
 
 class API_connection:
     # 5 requests per minute and 500 per day
@@ -500,3 +503,28 @@ class API_connection:
 
     def get_start_and_end_date(self, df):
         return [str(df["Datetime"][0]), str(df["Datetime"][len(df["Datetime"]) - 1])]
+
+    def Chin_commo_data(self, website):
+        html = urlopen(website)
+        bs = BeautifulSoup(html, "html.parser")
+        # print(bs.prettify())  # print the parsed data of html
+
+        # for link in bs.find_all("a"):
+        #     print("Inner Text: {}".format(link.text))
+        #     print("Title: {}".format(link.get("title")))
+        #     print("href: {}".format(link.get("href")))
+
+        gdp_table = bs.find_all("div")
+        gdp_table_data = gdp_table.tbody.find_all("tr")  # contains 2 rows
+
+        # Get all the headings of Lists
+        headings = []
+        for td in gdp_table_data[0].find_all("td"):
+            # remove any newlines and extra spaces from left and right
+            headings.append(td.b.text.replace('\n', ' ').strip())
+
+        print(headings)
+
+def main():
+    conn = API_connection()
+    time.sleep(10)
