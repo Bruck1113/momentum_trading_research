@@ -280,30 +280,36 @@ class rf_agric_strat(bt.Strategy):
         # price_data = pd.read_csv("data.csv")
         self.estimators = [self.ind5, self.ind2]
         self.models = rf_model.model("evaluation.csv", "data.csv")
+        # self.models = rf_model.svm_model("evaluation.csv", "data.csv")
         self.models.trim_df()
-        self.rf_model = self.models.random_forest_train(["RSI_range", "WMV_bin"], ["Short window bin"])
-
+        # self.rf_model = self.models.random_forest_train(["RSI_range", "WMV_bin"], ["Short window bin"])
+        using = ["RSI", "WilliamR"]
+        self.svm_model = self.models.svm_model(using, ["Long window bin"])
 
     def next(self):
         self.p.next_called_time += 1
         #Current logic: We need to exit the current trade to enter into the next trade
 
-        input = pd.DataFrame({"RSI_range": self.models.range_interval([self.rsi[0]], 65, 38)[0],
-                              "WNV_bin": self.models.turn_trend_into_bin([self.ind2.array[
-                                                                          self.ind2.array.index(self.ind2[0])] -
-                                                                          self.ind2.array[self.ind2.array.index(
-                                                                          self.ind2[0]) - 1]])[0]}, index=[0])
-        model_output = self.rf_model.predict(input)
+
+        # input = pd.DataFrame({"RSI_range": self.models.range_interval([self.rsi[0]], 65, 38)[0],
+        #                       "WNV_bin": self.models.turn_trend_into_bin([self.ind2.array[
+        #                                                                   self.ind2.array.index(self.ind2[0])] -
+        #                                                                   self.ind2.array[self.ind2.array.index(
+        #                                                                   self.ind2[0]) - 1]])[0]}, index=[0])
+        input = pd.DataFrame({"RSI": self.rsi[0],
+                              "WilliamR": self.ind9[0]}, index = [0])
+        model_output = self.svm_model.predict(input)
         self.p.model_output.append(model_output)
-        print("RSI: " + str(self.models.range_interval([self.rsi[0]], 65, 38)[0]) + "WMV_bin: " + str(self.models.turn_trend_into_bin([self.ind2.array[
-                                                                          self.ind2.array.index(self.ind2[0])] -
-                                                                          self.ind2.array[self.ind2.array.index(
-                                                                          self.ind2[0]) - 1]])[0]))
+        # print("RSI: " + str(self.models.range_interval([self.rsi[0]], 65, 38)[0]) + "WMV_bin: " + str(self.models.turn_trend_into_bin([self.ind2.array[
+        #                                                                   self.ind2.array.index(self.ind2[0])] -
+        #                                                                   self.ind2.array[self.ind2.array.index(
+        #                                                                   self.ind2[0]) - 1]])[0]))
+
+        print("RSI: " +str( self.rsi[0]) + " WilliamR: " + str(self.ind9[0]))
         if model_output == 1:
             print("Model predicted should buy")
         else:
             print("Model predicted should sell")
-        #
 
         #Volitility consideration
         daily_stddev = stats.stdev([self.data.close[0], self.data.open[0], self.data.high[0], self.data.low[0]])

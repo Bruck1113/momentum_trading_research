@@ -37,14 +37,24 @@ from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, r
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from scipy.stats import randint
 
+from sklearn.linear_model import Perceptron, LogisticRegression
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn import datasets
+from sklearn import metrics
+
 from sklearn.tree import export_graphviz
 from six import StringIO
 from IPython.display import Image
 import pydotplus
+import matplotlib.pyplot as plt
+
 
 class model:
 
     def __init__(self, bt_data, price_data):
+        #bt_data will be the name of the csv file
         self.df = pd.read_csv(bt_data)
         self.df = self.df.dropna()
         self.prices = pd.read_csv(price_data)
@@ -98,8 +108,8 @@ class model:
         Image(graph.create_png())
 
     def trim_df(self):
-        short_window = 3
-        long_window = 4
+        short_window = 1
+        long_window = 20
 
         self.df["Closing price"] = self.prices
         self.df["Short_window"] = self.df["Closing price"].rolling(3).mean
@@ -135,3 +145,31 @@ class model:
         # y_pred = rf.predict(X_test)
         # accuracy = accuracy_score(y_test, y_pred)
         # print("Accuracy:", accuracy)
+
+    def svm_model(self, features_cols, output_cols):
+        # Load the data set; In this example, the breast cancer dataset is loaded.
+        bc = self.df
+        X = bc[features_cols]
+        y = bc[output_cols]
+        
+        # Create training and test split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1, stratify=y)
+
+        sc = StandardScaler()
+        sc.fit(X_train)
+        X_train_std = sc.transform(X_train)
+        X_test_std = sc.transform(X_test)
+
+        # Instantiate the Support Vector Classifier (SVC)
+        svc = SVC(C=1.0, random_state=1, kernel='linear')
+        
+        # Fit the model
+        svc.fit(X_train_std, y_train)
+
+        # Make the predictions
+        y_predict = svc.predict(X_test_std)
+        
+        # Measure the performance
+        # print("Accuracy score %.3f" %metrics.accuracy_score(y_test, y_predict))
+
+        return svc
