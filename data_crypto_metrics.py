@@ -4,9 +4,32 @@ import configparser
 import pandas as pd
 import logging
 import time
-from ccxt import binance, deribit
+# import ccxt
+# from ccxt import binance, deribit
+from datetime import datetime, timedelta
+import pytz
+import arrow
+from typing import Dict
+# import pandas as pd
+from ccxt import deribit, binance
+
+
+
 
 exchange = deribit()
+spot_exchange = binance()
+btc_usdt_ob = spot_exchange.fetch_order_book('BTC/USDT')
+best_ask = min([x[0] for x in btc_usdt_ob['asks']])
+best_bid = max([x[0] for x in btc_usdt_ob['bids']])
+mid = (best_ask + best_bid) / 2
+target_expiry : datetime = datetime.utcnow() + timedelta(days=3)
+target_expiry = target_expiry.replace(tzinfo=pytz.UTC)
+
+exchange = deribit()
+markets = exchange.load_markets()
+
+
+
 #from binance.websocket.spot.websocket_api import SpotWebsocketAPIClient
 
 
@@ -52,69 +75,111 @@ def message_handler(_, message):
 #
 #     print("Number of active accounts:", num_active_accounts)
 
+
+def _extract_from_market(market : Dict) -> Dict:
+    print("hello world")
+    is_option : bool = market['option']
+    option_type : str = market['optionType'] if 'optionType' in market else '---'
+    symbol : str = market['symbol']
+    expiry : datetime = arrow.get(market['expiryDatetime']).datetime
+    strike : float = market['strike']
+    return {
+        'symbol' : symbol,
+        'is_option' : is_option,
+        'option_type' : option_type,
+        'expiry' : expiry,
+        'strike' : strike
+    }
+
+def _btc_options_market_filter(market : Dict, mid : float, target_expiry : datetime, strike_range_pct : float = 10, target_ccy : str = 'BTC') -> bool:
+    market_extract = _extract_from_market(market)
+    is_option = market_extract['is_option']
+    option_type = market_extract['option_type']
+    symbol = market_extract['symbol']
+    expiry = market_extract['expiry']
+
+    #Strike doesn't exist
+    strike = market_extract['strike']
+
+    lower_strike_limit = mid * (1-strike_range_pct/100)
+    higher_strike_limit = mid * (1+strike_range_pct/100)
+    if strike == None:
+        strike = 0
+
+
+    if is_option and target_ccy in symbol and expiry.year == target_expiry.year and expiry.month == target_expiry.month and expiry.day<=target_expiry.day and strike > lower_strike_limit and strike < higher_strike_limit:
+        return True
+    else:
+        return False
+'''
+We calling Deribit's API "get_book_summary_by_instrument":
+    https://docs.deribit.com/#public-get_book_summary_by_instrument
+But we do so via ccxt "Implicit Methods"
+    https://github.com/ccxt/ccxt/wiki/Manual
+'''
+
+
+marks = [markets[i] for i in markets.keys()]
+btc_markets = sorted([mark for mark in marks if _btc_options_market_filter(mark, mid, target_expiry)], key=lambda mark : mark['strike'])
+
 def _get_book_summary_by_instrument(instrument_name : str):
     params = {
         'instrument_name' : instrument_name
     }
     return exchange.public_get_get_book_summary_by_instrument( params = params )
 
-def get_deribit_put_call_open_interest(token):
-    # Deribit API endpoint for retrieving options open interest
-    url = 'https://www.deribit.com/api/v2/public/get_open_interest'
+def reorganize_dataframe(btc_markets):
 
-    # Parameters for retrieving Bitcoin options open interest
-    params = {
-        'currency': token,
-        'kind': 'option',
-        'expired': False
-    }
+    print(f"overall start: {datetime.now()}")
+    columns = ['symbol', 'option_type', 'expiry', 'strike', 'open_interest']
+    summaries = pd.DataFrame(columns=columns)
+    i = 0
+    for market in btc_markets:
+        market_extract = _extract_from_market(market)
+        summary = _get_book_summary_by_instrument(instrument_name=market['id'])
+        summaries.loc[i] = [ market_extract['symbol'], market_extract['option_type'], market_extract['expiry'], market_extract['strike'], summary['result'][0]['open_interest'] ]
+        i = i + 1
 
-    # Send the API request and retrieve the response
-    response = requests.get(url, params=params).json()
+    summaries.sort_values(by=['expiry', 'strike', 'option_type'], ascending=[True, True, False], inplace=True)
+    return summaries
 
-    # Initialize an empty dictionary to store the open interest by expiry date
-    open_interest_by_expiry = {}
+def compute_put_call_ratio(dt: pd.DataFrame):
+    data = dt.copy()
+    ratios = {}
+    for i in list(data["strike"]):
+        ratios[i] = {"put":data[ (data["option_type"] == "put") & (data["strike"] == i)]["open_interest"],
+                     "call":data[ (data["option_type"] == "call") & (data["strike"] == i)]["open_interest"]}
+        # ratios[i]["p/c"] = float(ratios[i]["put"] / ratios[i]["call"])
 
-    # Loop through each option contract in the response
-    for contract in response['result']:
-        # Extract the expiry date from the contract name
-        expiry_date = contract['instrument_name'].split('-')[-1]
+    ratios["p/c"] = ratios["put"] / ratios["call"]
+    return ratios
 
-        # Extract the put/call open interest from the contract data
-        put_open_interest = contract['open_interest_puts']
-        call_open_interest = contract['open_interest_calls']
-
-        # If this is the first contract for this expiry date, create a new dictionary entry
-        if expiry_date not in open_interest_by_expiry:
-            open_interest_by_expiry[expiry_date] = {}
-
-        # Add the put/call open interest to the dictionary for this expiry date
-        open_interest_by_expiry[expiry_date]['put'] = put_open_interest
-        open_interest_by_expiry[expiry_date]['call'] = call_open_interest
-
-    return open_interest_by_expiry
+df = reorganize_dataframe(btc_markets)
+ratios = compute_put_call_ratio(df)
+print(f"overall finish: {datetime.now()}")
 
 
 
 # Get server timestamp
-print(client.time())
-dic = get_deribit_put_call_open_interest("BTC")
-# Get klines of BTCUSDT at 1m interval
-print(client.klines("BTCUSDT", "1m"))
-# Get last 10 klines of BNBUSDT at 1h interval
-print(client.klines("BNBUSDT", "1h", limit=10))
+# print(client.time())
+# dic = get_deribit_put_call_open_interest("BTC")
+# # Get klines of BTCUSDT at 1m interval
+# print(client.klines("BTCUSDT", "1m"))
+# # Get last 10 klines of BNBUSDT at 1h interval
+# print(client.klines("BNBUSDT", "1h", limit=10))
 
-df = tick_data_storage("ETH")
-
-time.sleep(2)
-# my_client.ticker(symbols=["BNBBUSD", "BTCUSDT"], type="MINI", windowSize="2h")
-time.sleep(2)
-
-# API key/secret are required for user data endpoints
-client = Spot(api_key=config["keys"]["api_key"], api_secret=config["keys"]["api_secret"])
-
-# Get account and balance information
-print(client.account())
+# dico = get_deribit_btc_futures_open_interest()
+# df = tick_data_storage("ETH")
+#
+# time.sleep(2)
+# # my_client.ticker(symbols=["BNBBUSD", "BTCUSDT"], type="MINI", windowSize="2h")
+# time.sleep(2)
+#
+# # API key/secret are required for user data endpoints
+# client = Spot(api_key=config["keys"]["api_key"], api_secret=config["keys"]["api_secret"])
+#
+# # Get account and balance information
+# print(client.account())
 
 # Post a new order
 # params = {

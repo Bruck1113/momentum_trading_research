@@ -8,8 +8,11 @@ import json
 import pandas
 import eikon as ek
 import requests
+import cx_Oracle
+import pandas as pd
 import datetime
 import numpy as np
+from data_crypto_metrics import reorganize_dataframe, compute_put_call_ratio
 
 #c:\users\tszki\appdata\local\programs\python\python310\lib\site-packages
 #We will use exchangerate.bot for the development of this tool
@@ -97,7 +100,43 @@ def option_payoff_chart(strike_price, type, premium):
                 price_series[i] = strike_price - premium
 
 
+@info_server.route('/collect', methods=['GET', 'POST'])
+def daily_data_collection():
+    # Set the database connection credentials
+    username = 'USERNAME'
+    password = 'PASSWORD'
+    database = 'DATABASE_NAME'
+    host = 'DATABASE_HOST'
+    port = 1521
+    service_name = 'SERVICE_NAME'
 
+    # Create a connection to the database
+    dsn = cx_Oracle.makedsn(host, port, service_name=service_name)
+    connection = cx_Oracle.connect(username, password, dsn)
+
+    # Define the table name and the DataFrame to be inserted
+    table_name = 'TABLE_NAME'
+    data = pd.DataFrame({
+        'id': [1, 2, 3],
+        'name': ['John', 'Jane', 'Bob'],
+        'age': [30, 25, 40]
+    })
+
+    # Create a cursor object to execute SQL statements
+    cursor = connection.cursor()
+
+    # Create a SQL INSERT statement with placeholders for the DataFrame columns
+    sql = f"INSERT INTO {table_name} ({', '.join(data.columns)}) VALUES ({', '.join([':' + str(i + 1) for i in range(len(data.columns))])})"
+
+    # Loop through the DataFrame rows and execute the INSERT statement for each row
+    for row in data.itertuples(index=False):
+        cursor.execute(sql, row)
+
+    # Commit the changes to the database
+    connection.commit()
+
+    # Close the database connection
+    connection.close()
 
 
 
