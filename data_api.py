@@ -161,7 +161,7 @@ class API_connection:
             High_list.append(float(items['2. high']))
             Low_list.append(float(items['3. low']))
             Close_list.append(float(items['4. close']))
-            volume_list.append(float(items['6. volume']))
+            volume_list.append(float(items['5. volume']))
 
         list = [date, Open_list, High_list, Low_list, Close_list, volume_list]
         for items in list:
