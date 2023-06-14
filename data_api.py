@@ -197,13 +197,8 @@ class API_connection:
         mpf.plot(ohlc, type="candle")
         plt.show()
 
-    def get_crypto_market_metrics(self, type, data, since, until, freq, format, timestamp) -> pd.DataFrame:
-        #    , since, until, freq, format, timestamp
-        local_params = {"a": data, 's': since, 'u': until, 'i': freq, 'f': format, 'timestamp_format': timestamp,
-                        "api_key": self.Credentials["Crypto_API_Key"]}
-        url = self.glassnode_url + "market/" + type
-        print("url = " + url)
 
+    def connecting_glassnode_api(self, url, type,  local_params, data):
         df = pd.DataFrame()
         if data not in self.Token:
             print("This token is not available in glassnode api, plz seek for help")
@@ -211,10 +206,34 @@ class API_connection:
 
         if type == "price_usd_close":
             # print("Hit")
-            r = requests.get(url, params={'a': data, 'api_key': self.Credentials['Crypto_API_Key']})
-        elif type == "price_usd_ohlc":
-            r = requests.get(url, params={'a': data, 's': since, 'u': until, 'i': freq,
+            r = requests.get(url, params={'a': local_params["a"], 'api_key': self.Credentials['Crypto_API_Key']})
+        else: #type == "price_usd_ohlc":
+            r = requests.get(url, params={'a': local_params["a"], 's': local_params["s"], 'u': local_params["u"], 'i': local_params["i"],
                                           'api_key': self.Credentials['Crypto_API_Key']})
+        # elif type in ["accumulation_balance", "accumulation_count", "active_count"]:
+        #     r = requests.get(url, params={'a': local_params["a"], 's': local_params["s"], 'u': local_params["u"], 'i': local_params["i"],
+        #                                   'api_key': self.Credentials['Crypto_API_Key']})
+        return r
+
+    def get_crypto_market_metrics(self, endpoint, type, data, since, until, freq, format, timestamp) -> pd.DataFrame:
+        #    , since, until, freq, format, timestamp
+        local_params = {"a": data, 's': since, 'u': until, 'i': freq, 'f': format, 'timestamp_format': timestamp,
+                        "api_key": self.Credentials["Crypto_API_Key"]}
+        url = self.glassnode_url + endpoint + type
+        print("url = " + url)
+
+        r = self.connecting_glassnode_api(url, type, local_params, data)
+        # df = pd.DataFrame()
+        # if data not in self.Token:
+        #     print("This token is not available in glassnode api, plz seek for help")
+        #     return df
+        #
+        # if type == "price_usd_close":
+        #     # print("Hit")
+        #     r = requests.get(url, params={'a': data, 'api_key': self.Credentials['Crypto_API_Key']})
+        # elif type == "price_usd_ohlc":
+        #     r = requests.get(url, params={'a': data, 's': since, 'u': until, 'i': freq,
+        #                                   'api_key': self.Credentials['Crypto_API_Key']})
         # print(r.text)
         r_json = json.loads(r.text)
         print(r_json)
@@ -241,7 +260,34 @@ class API_connection:
         # if the requested datatype is csv
         # return df
 
-    def transferring_normal_datetime_into_unix(date):
+    def get_crypto_addresses_info(self, type, data, since, until, freq, format, timestamp):
+        local_params = {"a": data, 's': since, 'u': until, 'i': freq, 'f': format, 'timestamp_format': timestamp,
+                        "api_key": self.Credentials["Crypto_API_Key"]}
+        print(local_params)
+        available_Type = ["accumulation_balance", "accumulation_count", "active_count", "loss_count", "min_1_count", "min_1_usd_count", "min_10k_count", "min_10k_usd_count"]
+        url = self.glassnode_url + "addresses/" + type
+        print("url = " + url)
+
+        r = self.connecting_glassnode_api(url, type, local_params, data)
+
+        r_json = json.loads(r.text)
+        #  this is a list object
+
+        #To decompoise it into a dataframe
+        time = []
+        values = []
+        for i in r_json:
+            time.append(self.transferring_unix_into_datetime(i["t"]))
+            values.append((i["v"]))
+
+        df = pd.DataFrame({"Time": time, str(type): values})
+        # pd.read_json(r_json)
+        print(df)
+        return df
+
+
+
+    def transferring_normal_datetime_into_unix(self, date):
         day_list = date.split('-')
         unix_time = str(int(datetime.datetime(int(day_list[0]), int(day_list[1]), int(day_list[2]), 0, 0).timestamp()))
         return unix_time
@@ -311,6 +357,31 @@ class API_connection:
             df = df[::-1]
             print("RAN")
         return df
+
+    def get_multi_data_in_df(self, functions:dict, token, since, until, freq, format, timestamp):
+        #For the functions, it will be like a dict with keys that represents the endpoints
+        avai_endpoints = ["addresses", "bridges", "blockchain", "defi", "derivatives", "distribution", "entities", "eth2", "fees",
+                          "indicators", "institutions", "lightning", "market", "mempool", "mining", "protocols", "signals", "supply", "transactions"]
+
+        #Current parameters
+        current_asking_metrics = {"derivatives": ["options_volume_put_call_ratio"], "addresses" : ["non_zero_count"], "mining":["volume_mined_sum"]}
+        local_params = {"a": token, 's': since, 'u': until, 'i': freq, 'f': format, 'timestamp_format': timestamp,
+                        "api_key": self.Credentials["Crypto_API_Key"]}
+
+        collection = {}
+        for i in current_asking_metrics.keys():
+            for metrics in current_asking_metrics[i]:
+                url = self.glassnode_url + i + "/" + metrics
+                print(url)
+                print(local_params)
+                r = self.connecting_glassnode_api(url, metrics, local_params, token)
+                collection[metrics] = json.loads(r.text)
+
+        print(collection)
+        # df = pd.DataFrame(collection)
+        # df.to_csv("metrics.csv")
+        # return df
+
 
     def get_economic_indicator(self, function, interval) -> pd.DataFrame:
         url = self.stock_url[0] + function + self.stock_url[2] + interval + self.stock_url[3]
@@ -528,3 +599,5 @@ class API_connection:
 def main():
     conn = API_connection()
     time.sleep(10)
+
+main()
