@@ -16,6 +16,7 @@ from data_crypto_metrics import reorganize_dataframe, compute_put_call_ratio
 
 #c:\users\tszki\appdata\local\programs\python\python310\lib\site-packages
 #We will use exchangerate.bot for the development of this tool
+# need to turn on eikon first
 ek.set_app_key("b759357753f743e4b5c903da93b36640f32a4b32")
 
 url = 'https://api.exchangerate.host/latest'
@@ -100,6 +101,7 @@ def option_payoff_chart(strike_price, type, premium):
                 price_series[i] = strike_price - premium
 
 
+
 @info_server.route('/collect', methods=['GET', 'POST'])
 def daily_data_collection():
     # Set the database connection credentials
@@ -137,7 +139,7 @@ def daily_data_collection():
 
     # Close the database connection
     connection.close()
-
+# not yet finished, need to create the database first
 
 
 

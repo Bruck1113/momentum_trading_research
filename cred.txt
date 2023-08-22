@@ -1,0 +1,4 @@
+For binance testnet api
+API Key: VUdQSkMwfad4OIM3rd3oHyVZ3agVrcuUsG1PT8ai6GlfR4d9M7IxKpKHg9AEKbbA
+
+Secret Key: VFkJ0L4drBKZ7Xmf8bILROxYbj86CcOeaZsHxuHMzMjXbl2fS0Ne22dRyxsEVKfo

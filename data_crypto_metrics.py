@@ -18,6 +18,8 @@ from ccxt import deribit, binance
 
 exchange = deribit()
 spot_exchange = binance()
+binance_spot_testnet_api = "VUdQSkMwfad4OIM3rd3oHyVZ3agVrcuUsG1PT8ai6GlfR4d9M7IxKpKHg9AEKbbA"
+binance_spot_testnet_secret = "VFkJ0L4drBKZ7Xmf8bILROxYbj86CcOeaZsHxuHMzMjXbl2fS0Ne22dRyxsEVKfo"
 btc_usdt_ob = spot_exchange.fetch_order_book('BTC/USDT')
 best_ask = min([x[0] for x in btc_usdt_ob['asks']])
 best_bid = max([x[0] for x in btc_usdt_ob['bids']])

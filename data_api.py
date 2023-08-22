@@ -292,6 +292,8 @@ class API_connection:
         unix_time = str(int(datetime.datetime(int(day_list[0]), int(day_list[1]), int(day_list[2]), 0, 0).timestamp()))
         return unix_time
 
+
+
     def check_symbol_exists(self, symbol):
         # replace the "demo" apikey below with your own key from https://www.alphavantage.co/support/#api-key
         # url = 'https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=tesco&apikey=demo'
@@ -299,6 +301,8 @@ class API_connection:
         r = requests.get(url)
         data = r.json()
         print(data)
+
+
 
     def get_datalist_in_csv(self, function, symbol, interval) -> pd.DataFrame:
         df = pd.DataFrame()
