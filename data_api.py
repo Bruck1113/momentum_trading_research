@@ -123,7 +123,10 @@ class API_connection:
         url = self.stock_url[0] + intv + self.stock_url[1] + symbol
         if (function == "intraday"):
             url = url + self.stock_url[2] + interval
-        url = url + "&outputsize=full" + self.stock_url[3]
+        if (function == "weekly"):
+            url = url + self.stock_url[3]
+        else:
+            url = url + "&outputsize=full" + self.stock_url[3]
 
         print(url)
         r = requests.get(url)
