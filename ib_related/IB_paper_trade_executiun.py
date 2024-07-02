@@ -17,6 +17,7 @@ import paper_trading_strategies as tools
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract
+from const import TRADING_STOCKS
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -34,6 +35,10 @@ def logTemplate(df):
 tick = []
 # while(count < 1):
 #Making a ticker list to extract data
+def initiate():
+    trading_stocks = TRADING_STOCKS
+    
+
 
 def listen():
     prev_time = dt.datetime.now()
@@ -41,6 +46,8 @@ def listen():
     logTemplate(df_dico)
 
 def main():
+    print("Setting up trading environment")
+    initiate()
     print("Listening started ")
     listen()
     schedule.every(5).minutes.do(listen)

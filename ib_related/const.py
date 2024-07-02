@@ -50,3 +50,6 @@ STOCKS = [
     "LLY",
     "DHR"
 ]
+
+TRADING_STOCKS = []
+allocation_strategy_boosted = False

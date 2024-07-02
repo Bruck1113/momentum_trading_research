@@ -45,24 +45,6 @@ class TradeApp(EWrapper, EClient):
     def rerouteMktDataReq(self, reqId: int, conId: int, exchange: str):
         print("Re-route market data request. ReqId:", reqId, "ConId:", conId, "Exchange:", exchange)
 
-    
-# app = TradeApp()      
-# app.connect("127.0.0.1", 7496, 1)
-
-# con_thread = threading.Thread(target=websocket_con, daemon=True)
-# con_thread.start()
-
-# time.sleep(1) 
-
-# contract = Contract()
-# contract.symbol = "AAPL"
-# contract.secType = "STK"
-# contract.exchange = "SMART"
-# contract.currency = "USD"
-
-# app.reqMktDataType(1) #Choose getting Live Data
-# app.reqMktData(102, contract, "", False, False, [])
-#app.reqMktData(102, contract, "mdoff,236", False, False, []) #only get Shortable
 
 #create different classes for creating contract later
 class stock_obj():
@@ -92,6 +74,15 @@ class Option():
         self.strike = strike
         self.right = right
         self.exchange = exchange
+
+class data:
+    def __init__(self, type, security) -> None:
+        self.type =  type # For verifying if user is requesting historical or tick data
+        self.security = security # Contract type object
+        self.value = []
+
+    def request(self, tradeApp):
+        
 
 class tools:
     def __init__(self, ibClient) -> None:
