@@ -38,21 +38,18 @@ tick = []
 def initiate():
     trading_stocks = TRADING_STOCKS
     
-
-
 def listen():
     prev_time = dt.datetime.now()
-    df_dico = toolsPack.get_Quotes()
-    logTemplate(df_dico)
+    # df_dico = toolsPack.get_Quotes()
+    # logTemplate(df_dico)
+
 
 def main():
     print("Setting up trading environment")
     initiate()
     print("Listening started ")
     listen()
-    schedule.every(5).minutes.do(listen)
-    while True:
-        schedule.run_pending()
+    
 
 main()
 
